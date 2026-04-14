@@ -36,7 +36,9 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
     const renderPage = async () => {
       try {
         setLoading(true);
-        const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+        // Create a copy of the buffer to avoid "detached ArrayBuffer" error
+        const bufferCopy = pdfBuffer.slice(0);
+        const pdf = await pdfjsLib.getDocument({ data: bufferCopy }).promise;
         setPageCount(pdf.numPages);
         onPageCountChange?.(pdf.numPages);
 
