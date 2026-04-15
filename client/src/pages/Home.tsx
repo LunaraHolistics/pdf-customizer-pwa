@@ -48,10 +48,25 @@ export default function Home() {
   const [projectId] = useState(() => nanoid());
   const [pdfBuffer, setPdfBuffer] = useState<ArrayBuffer | undefined>();
   const [pdfFileName, setPdfFileName] = useState<string>('');
+  const [pdfLayerInitialized, setPdfLayerInitialized] = useState(false);
 
-  // Initialize with default layers
+  // Initialize with default layers and PDF layer
   useEffect(() => {
     const initializeDefaultLayers = async () => {
+      // Create PDF layer first (will be populated when PDF is uploaded)
+      const pdfLayerId = addLayer({
+        type: 'pdf',
+        name: 'PDF Base',
+        position: { x: 0, y: 0 },
+        size: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
+        rotation: 0,
+        visible: false,
+        locked: false,
+        content: '',
+        isDeletable: false,
+        applyToAllPages: true,
+      });
+
       // Add default background
       const bgId = addLayer({
         type: 'background',
@@ -103,20 +118,22 @@ export default function Home() {
       const footerId = addLayer({
         type: 'text',
         name: 'Rodapé',
-        position: { x: 20, y: CANVAS_HEIGHT - 40 },
-        size: { width: CANVAS_WIDTH - 40, height: 30 },
+        position: { x: 150, y: 550 },
+        size: { width: 600, height: 40 },
         rotation: 0,
         visible: true,
         locked: false,
         content: defaultAssets.defaultFooterText,
-        fontSize: 10,
+        fontSize: 12,
         fontFamily: 'Arial',
         fontWeight: 'normal',
         color: '#6b7280',
         textAlign: 'center',
-        lineHeight: 1.2,
+        lineHeight: 1.5,
         applyToAllPages: true,
       } as TextLayer);
+
+      setPdfLayerInitialized(true);
     };
 
     initializeDefaultLayers();
@@ -168,6 +185,7 @@ export default function Home() {
             locked: false,
             content: base64,
             adjustments: getDefaultAdjustments(),
+            isDeletable: true,
           });
 
           selectLayer(imgId);
@@ -196,9 +214,9 @@ export default function Home() {
 
   // Handle clearing all layers
   const handleClearAll = useCallback(() => {
-    if (window.confirm('Tem certeza que deseja limpar todas as camadas?')) {
+    if (window.confirm('Tem certeza que deseja limpar todas as camadas? (O PDF base será mantido)')) {
       clearAllLayers();
-      toast.success('Camadas limpas');
+      toast.success('Camadas limpas (PDF base mantido)');
     }
   }, [clearAllLayers]);
 
@@ -238,16 +256,44 @@ export default function Home() {
   const selectedLayer = layers.find((l) => l.id === selectedState.selectedLayerId);
 
   // Handle PDF file upload
-  const handlePDFUpload = useCallback((buffer: ArrayBuffer, fileName: string) => {
-    setPdfBuffer(buffer);
-    setPdfFileName(fileName);
-  }, []);
+  const handlePDFUpload = useCallback(
+    (buffer: ArrayBuffer, fileName: string) => {
+      setPdfBuffer(buffer);
+      setPdfFileName(fileName);
+
+      // Create or update PDF layer
+      const existingPdfLayer = layers.find((l) => l.type === 'pdf');
+
+      // Convert buffer to data URL for preview
+      const blob = new Blob([buffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+
+      if (existingPdfLayer) {
+        // Update existing PDF layer
+        updateLayer(existingPdfLayer.id, {
+          content: url,
+          name: fileName,
+          visible: true,
+        });
+      }
+    },
+    [layers, updateLayer]
+  );
 
   // Handle PDF file removal
   const handlePDFRemove = useCallback(() => {
     setPdfBuffer(undefined);
     setPdfFileName('');
-  }, []);
+
+    // Clear PDF layer content but keep the layer
+    const pdfLayer = layers.find((l) => l.type === 'pdf');
+    if (pdfLayer) {
+      updateLayer(pdfLayer.id, {
+        content: '',
+        visible: false,
+      });
+    }
+  }, [layers, updateLayer]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -282,80 +328,75 @@ export default function Home() {
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
         {/* Left: PDF Preview or Canvas */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {pdfBuffer ? (
-            <PDFPreview pdfBuffer={pdfBuffer} />
+            <PDFPreview
+              pdfBuffer={pdfBuffer}
+              onPageChange={(page) => {
+                // Handle page change
+              }}
+            />
           ) : (
-            <div className="flex-1 bg-gray-200 rounded-lg overflow-auto flex items-center justify-center p-4">
-              <Canvas
-                layers={layers}
-                selectedLayerId={selectedState.selectedLayerId}
-                onLayerSelect={selectLayer}
-                onLayerUpdate={updateLayer}
-                onLayerDelete={deleteLayer}
-                canvasWidth={CANVAS_WIDTH}
-                canvasHeight={CANVAS_HEIGHT}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Right panels */}
-        <div className="flex gap-4 w-96">
-          {/* Layer panel */}
-          <div className="flex-1 bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
-            <LayerPanel
+            <Canvas
               layers={layers}
               selectedLayerId={selectedState.selectedLayerId}
               onLayerSelect={selectLayer}
-              onLayerDelete={deleteLayer}
-              onLayerDuplicate={duplicateLayer}
               onLayerUpdate={updateLayer}
-              onLayerReorder={reorderLayers}
-              onMoveToFront={moveLayerToFront}
-              onMoveToBack={moveLayerToBack}
+              onLayerDelete={deleteLayer}
+              canvasWidth={CANVAS_WIDTH}
+              canvasHeight={CANVAS_HEIGHT}
             />
-          </div>
+          )}
+        </div>
 
-          {/* Adjustment panels */}
-          <div className="flex-1 bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
-            {selectedLayer?.type === 'text' ? (
-              <TextEditPanel
-                layer={selectedLayer as TextLayer}
-                onTextChange={(text) => handleTextUpdate('content', text)}
-                onPropertyChange={handleTextUpdate}
-              />
-            ) : selectedLayer?.type === 'image' ||
-              selectedLayer?.type === 'logo' ||
-              selectedLayer?.type === 'background' ? (
-              <ImageAdjustmentPanel
-                layer={selectedLayer}
-                onAdjustmentChange={handleImageAdjustmentUpdate}
-                onReset={handleResetAdjustments}
-              />
-            ) : (
-              <div className="p-4 text-gray-500 text-sm">
-                Selecione uma camada para editar
-              </div>
-            )}
-          </div>
+        {/* Middle: Layer Panel */}
+        <div className="w-64 flex flex-col min-w-0">
+          <LayerPanel
+            layers={layers}
+            selectedLayerId={selectedState.selectedLayerId}
+            onLayerSelect={selectLayer}
+            onLayerDelete={deleteLayer}
+            onLayerDuplicate={duplicateLayer}
+            onLayerUpdate={updateLayer}
+            onLayerReorder={reorderLayers}
+            onMoveToFront={moveLayerToFront}
+            onMoveToBack={moveLayerToBack}
+          />
+        </div>
+
+        {/* Right: Edit Panel */}
+        <div className="w-80 flex flex-col min-w-0 gap-4">
+          {selectedLayer && selectedLayer.type === 'text' && (
+            <TextEditPanel
+              layer={selectedLayer as TextLayer}
+              onTextChange={(text) => handleTextUpdate('content', text)}
+              onPropertyChange={handleTextUpdate}
+            />
+          )}
+
+          {selectedLayer && (selectedLayer.type === 'image' || selectedLayer.type === 'logo' || selectedLayer.type === 'background' || selectedLayer.type === 'pdf') && (
+            <ImageAdjustmentPanel
+              layer={selectedLayer}
+              onAdjustmentChange={handleImageAdjustmentUpdate}
+              onReset={handleResetAdjustments}
+            />
+          )}
+
+          {!selectedLayer && (
+            <div className="bg-white rounded-lg p-4 text-center text-gray-500">
+              <p className="text-sm">Selecione uma camada para editar</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4 text-center text-sm text-gray-600">
-        <p>
-          Gostou? Considere fazer uma doação via PIX:{' '}
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText('lunara_terapias@jim.com');
-              toast.success('Chave PIX copiada!');
-            }}
-            className="font-semibold text-blue-600 hover:text-blue-700 underline"
-          >
-            lunara_terapias@jim.com
-          </button>
-        </p>
+      <div className="bg-white border-t border-gray-200 px-6 py-3 text-center text-sm text-gray-600">
+        <p>Gostou? Considere fazer uma doação via PIX: <a href="#" className="text-blue-600 hover:underline" onClick={(e) => {
+          e.preventDefault();
+          navigator.clipboard.writeText('lunara_terapias@jim.com');
+          toast.success('Chave PIX copiada!');
+        }}>lunara_terapias@jim.com</a></p>
       </div>
     </div>
   );

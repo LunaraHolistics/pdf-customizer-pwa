@@ -8,6 +8,7 @@ import { Rnd } from 'react-rnd';
 import { Layer, SnapGuide, Position } from '@/types';
 import { useImageAdjustments } from '@/hooks/useImageAdjustments';
 import { calculateSnapGuides, getSnapPosition } from '@/lib/coordinateMapping';
+import { PrintMarginGuides } from '@/components/PrintMarginGuides';
 import { Eye, EyeOff, Lock, Unlock, X } from 'lucide-react';
 
 interface CanvasProps {
@@ -79,6 +80,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   };
 
   const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+  const pdfLayer = layers.find((l) => l.type === 'pdf');
 
   return (
     <div
@@ -90,6 +92,36 @@ export const Canvas: React.FC<CanvasProps> = ({
       }}
       onClick={() => onLayerSelect(null)}
     >
+      {/* Print margins and guides */}
+      <PrintMarginGuides
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        marginTop={20}
+        marginRight={20}
+        marginBottom={20}
+        marginLeft={20}
+        showGrid={true}
+        gridSize={50}
+      />
+
+      {/* PDF Background Layer */}
+      {pdfLayer && pdfLayer.visible && (
+        <div
+          className="absolute w-full h-full"
+          style={{
+            zIndex: pdfLayer.zIndex,
+            opacity: (pdfLayer.adjustments?.opacity ?? 100) / 100,
+          }}
+        >
+          <img
+            src={pdfLayer.content}
+            alt="PDF Background"
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        </div>
+      )}
+
       {/* Snap guides */}
       {visibleGuides.map((guide, idx) => (
         <div
@@ -104,12 +136,14 @@ export const Canvas: React.FC<CanvasProps> = ({
                   top: 0,
                   height: '100%',
                   opacity: 0.5,
+                  zIndex: 100,
                 }
               : {
                   top: guide.position,
                   left: 0,
                   width: '100%',
                   opacity: 0.5,
+                  zIndex: 100,
                 }
           }
         />
@@ -117,7 +151,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       {/* Layers */}
       {sortedLayers.map((layer) => {
-        if (!layer.visible) return null;
+        if (!layer.visible || layer.type === 'pdf') return null;
 
         const isSelected = selectedLayerId === layer.id;
         const filterString = layer.adjustments ? getFilterString(layer.adjustments) : '';
@@ -146,6 +180,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                 ? 'ring-2 ring-blue-500 ring-offset-0'
                 : 'hover:ring-1 hover:ring-gray-400'
             } cursor-move transition-all`}
+            style={{
+              zIndex: layer.zIndex + 10,
+            }}
           >
             <div
               className="w-full h-full relative group"
@@ -200,16 +237,18 @@ export const Canvas: React.FC<CanvasProps> = ({
                   >
                     {layer.locked ? <Lock size={16} /> : <Unlock size={16} />}
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onLayerDelete(layer.id);
-                    }}
-                    className="p-1 hover:bg-red-600 rounded ml-auto"
-                    title="Deletar"
-                  >
-                    <X size={16} />
-                  </button>
+                  {layer.isDeletable !== false && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onLayerDelete(layer.id);
+                      }}
+                      className="p-1 hover:bg-red-600 rounded ml-auto"
+                      title="Deletar"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Layer } from '@/types';
-import { Eye, EyeOff, Lock, Unlock, Copy, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Copy, Trash2, ChevronUp, ChevronDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -32,6 +32,36 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   onMoveToBack,
 }) => {
   const sortedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
+
+  const getLayerIcon = (layer: Layer) => {
+    switch (layer.type) {
+      case 'text':
+        return 'T';
+      case 'pdf':
+        return 'PDF';
+      case 'logo':
+        return 'L';
+      case 'background':
+        return 'BG';
+      default:
+        return 'I';
+    }
+  };
+
+  const getLayerColor = (layer: Layer) => {
+    switch (layer.type) {
+      case 'text':
+        return 'bg-blue-200';
+      case 'pdf':
+        return 'bg-red-200';
+      case 'logo':
+        return 'bg-green-200';
+      case 'background':
+        return 'bg-yellow-200';
+      default:
+        return 'bg-gray-200';
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-gray-200">
@@ -62,8 +92,8 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
               >
                 <div className="flex items-center gap-2 mb-2">
                   {/* Layer icon */}
-                  <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
-                    {layer.type === 'text' ? 'T' : 'I'}
+                  <div className={`w-8 h-8 rounded ${getLayerColor(layer)} flex items-center justify-center text-xs font-bold text-gray-700`}>
+                    {getLayerIcon(layer)}
                   </div>
 
                   {/* Layer name */}
@@ -107,7 +137,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
 
                 {/* Action buttons */}
                 {selectedLayerId === layer.id && (
-                  <div className="flex gap-1 mt-2 pt-2 border-t border-gray-200">
+                  <div className="flex gap-1 mt-2 pt-2 border-t border-gray-200 flex-wrap">
                     <Button
                       size="sm"
                       variant="outline"
@@ -116,7 +146,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         onMoveToFront(layer.id);
                       }}
                       title="Trazer para frente"
-                      className="flex-1"
+                      className="flex-1 min-w-fit"
                     >
                       <ChevronUp size={14} />
                     </Button>
@@ -128,34 +158,43 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         onMoveToBack(layer.id);
                       }}
                       title="Enviar para trás"
-                      className="flex-1"
+                      className="flex-1 min-w-fit"
                     >
                       <ChevronDown size={14} />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onLayerDuplicate(layer.id);
-                      }}
-                      title="Duplicar"
-                      className="flex-1"
-                    >
-                      <Copy size={14} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onLayerDelete(layer.id);
-                      }}
-                      title="Deletar"
-                      className="flex-1"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
+                    {layer.type !== 'pdf' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLayerDuplicate(layer.id);
+                          }}
+                          title="Duplicar"
+                          className="flex-1 min-w-fit"
+                        >
+                          <Copy size={14} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLayerDelete(layer.id);
+                          }}
+                          title="Deletar"
+                          className="flex-1 min-w-fit"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </>
+                    )}
+                    {layer.type === 'pdf' && (
+                      <div className="flex-1 text-center text-xs text-gray-500 py-1">
+                        Camada base (não deletável)
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -55,15 +55,20 @@ export const useLayerManager = (initialLayers: Layer[] = []): UseLayerManagerRet
     );
   }, []);
 
-  // Delete layer
+  // Delete layer (but not PDF layers)
   const deleteLayer = useCallback((id: string) => {
+    const layerToDelete = layers.find((l) => l.id === id);
+    // Prevent deletion of PDF layers
+    if (layerToDelete?.type === 'pdf' || layerToDelete?.isDeletable === false) {
+      return;
+    }
     setLayers((prev) => prev.filter((layer) => layer.id !== id));
     setSelectedState((prev) => ({
       ...prev,
       selectedLayerId: prev.selectedLayerId === id ? null : prev.selectedLayerId,
       selectedLayers: prev.selectedLayers.filter((lid) => lid !== id),
     }));
-  }, []);
+  }, [layers]);
 
   // Duplicate layer
   const duplicateLayer = useCallback((id: string) => {
@@ -166,9 +171,9 @@ export const useLayerManager = (initialLayers: Layer[] = []): UseLayerManagerRet
     updateLayer(id, { locked: !layers.find((l) => l.id === id)?.locked });
   }, [layers, updateLayer]);
 
-  // Clear all layers
+  // Clear all layers (but keep PDF layer)
   const clearLayers = useCallback(() => {
-    setLayers([]);
+    setLayers((prev) => prev.filter((l) => l.type !== 'pdf'));
     deselectAll();
   }, [deselectAll]);
 

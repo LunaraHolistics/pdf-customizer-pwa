@@ -3,7 +3,7 @@
  * Core data structures for layer management, PDF processing, and state management
  */
 
-export type LayerType = 'image' | 'text' | 'logo' | 'background';
+export type LayerType = 'image' | 'text' | 'logo' | 'background' | 'pdf';
 
 export interface Position {
   x: number;
@@ -37,6 +37,7 @@ export interface Layer {
   adjustments?: ImageAdjustments;
   applyToAllPages?: boolean; // For images/elements
   pageNumber?: number; // Specific page if not all pages
+  isDeletable?: boolean; // Whether this layer can be deleted (false for PDF background)
 }
 
 export interface TextLayer extends Layer {
