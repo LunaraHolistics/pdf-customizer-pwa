@@ -327,8 +327,8 @@ export default function Home() {
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
-        {/* Left: PDF Preview or Canvas */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Left: PDF Preview or Canvas - ajustar a largura para não sobrepor a caixa de ferramenta lateral */}
+        <div className="flex-1 flex flex-col min-w-0 max-w-4xl">
           {pdfBuffer ? (
             <PDFPreview
               pdfBuffer={pdfBuffer}
@@ -350,7 +350,7 @@ export default function Home() {
         </div>
 
         {/* Middle: Layer Panel */}
-        <div className="w-64 flex flex-col min-w-0">
+        <div className="w-56 flex flex-col min-w-0 flex-shrink-0">
           <LayerPanel
             layers={layers}
             selectedLayerId={selectedState.selectedLayerId}
@@ -365,7 +365,7 @@ export default function Home() {
         </div>
 
         {/* Right: Edit Panel */}
-        <div className="w-80 flex flex-col min-w-0 gap-4">
+        <div className="w-72 flex flex-col min-w-0 gap-4 flex-shrink-0 overflow-y-auto">
           {selectedLayer && selectedLayer.type === 'text' && (
             <TextEditPanel
               layer={selectedLayer as TextLayer}
