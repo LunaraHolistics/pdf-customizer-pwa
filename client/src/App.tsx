@@ -1,42 +1,80 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-
-
-function Router() {
-  return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+import { useRef } from 'react'
+import './App.css'
 
 function App() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleOpenHtm = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      const textoLido = e.target?.result as string
+      
+      // Cria um Blob HTML e gera uma URL temporária
+      const blob = new Blob([textoLido], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      
+      // Abre em nova aba
+      window.open(url, '_blank')
+      
+      // Limpa o input para permitir reabrir o mesmo arquivo se necessário
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+
+    reader.readAsText(file)
+  }
+
   return (
-    <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
+    <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1>BioSync Editor (Web)</h1>
+      <p>Selecione um arquivo .htm do seu computador para visualizar.</p>
+      
+      {/* Input oculto */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept=".htm,.html" 
+        style={{ display: 'none' }} 
+        onChange={handleOpenHtm} 
+      />
+
+      {/* Botão Visível */}
+      <button
+        onClick={handleButtonClick}
+        style={{
+          padding: '12px 24px',
+          fontSize: '16px',
+          backgroundColor: '#2563eb',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          marginTop: '20px',
+          fontWeight: 'bold'
+        }}
       >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
+        Abrir Análises HTM
+      </button>
+
+      <div style={{ marginTop: '40px', padding: '20px', background: '#f3f4f6', borderRadius: '8px', display: 'inline-block' }}>
+        <h3>Como funciona?</h3>
+        <p style={{ fontSize: '14px', color: '#555', maxWidth: '400px' }}>
+          Ao clicar no botão, você selecionará um arquivo local. O app lerá o conteúdo, 
+          criará uma URL temporária segura e abrirá o arquivo em uma nova aba do navegador, 
+          simulando o comportamento de um servidor local.
+        </p>
+      </div>
+    </div>
+  )
 }
 
-export default App;
+export default App
