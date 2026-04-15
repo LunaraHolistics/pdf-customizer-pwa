@@ -24,10 +24,13 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   onPageCountChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-  const [scale, setScale] = useState(1.5);
+  // Zoom inicial em 100% ou melhor ajuste para mostrar a página toda na janela
+  const [scale, setScale] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [autoScale, setAutoScale] = useState(true);
 
   // Render PDF page
   useEffect(() => {
@@ -71,6 +74,34 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
     renderPage();
   }, [pdfBuffer, pageNumber, scale, onPageChange, onPageCountChange]);
 
+  // Calculate optimal zoom to fit page in container
+  useEffect(() => {
+    if (!autoScale || !containerRef.current || !canvasRef.current || pageCount === 0) return;
+
+    const calculateOptimalScale = () => {
+      const container = containerRef.current;
+      const canvas = canvasRef.current;
+      
+      if (!container || !canvas) return;
+
+      const containerWidth = container.clientWidth - 40; // Subtract padding
+      const containerHeight = container.clientHeight - 100; // Subtract toolbar height
+
+      if (containerWidth > 0 && containerHeight > 0 && canvas.width > 0 && canvas.height > 0) {
+        const scaleX = containerWidth / canvas.width;
+        const scaleY = containerHeight / canvas.height;
+        const optimalScale = Math.min(scaleX, scaleY, 1.5); // Max 150%
+
+        setScale(Math.max(0.5, optimalScale));
+        setAutoScale(false); // Disable auto-scaling after first calculation
+      }
+    };
+
+    // Small delay to ensure canvas is rendered
+    const timer = setTimeout(calculateOptimalScale, 100);
+    return () => clearTimeout(timer);
+  }, [pageCount, autoScale]);
+
   const handlePreviousPage = () => {
     setPageNumber((prev) => Math.max(prev - 1, 1));
   };
@@ -81,10 +112,16 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
 
   const handleZoomIn = () => {
     setScale((prev) => prev + 0.2);
+    setAutoScale(false);
   };
 
   const handleZoomOut = () => {
     setScale((prev) => Math.max(prev - 0.2, 0.5));
+    setAutoScale(false);
+  };
+
+  const handleFitToWindow = () => {
+    setAutoScale(true);
   };
 
   if (!pdfBuffer) {
@@ -96,19 +133,20 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-md">
+    <div ref={containerRef} className="flex flex-col h-full bg-white rounded-lg shadow-md">
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="outline"
             onClick={handlePreviousPage}
             disabled={pageNumber === 1}
+            title="Página anterior"
           >
             <ChevronLeft size={16} />
           </Button>
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium whitespace-nowrap">
             Página {pageNumber} de {pageCount}
           </span>
           <Button
@@ -116,6 +154,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
             variant="outline"
             onClick={handleNextPage}
             disabled={pageNumber === pageCount}
+            title="Próxima página"
           >
             <ChevronRight size={16} />
           </Button>
@@ -127,18 +166,28 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
             variant="outline"
             onClick={handleZoomOut}
             disabled={scale <= 0.5}
+            title="Diminuir zoom"
           >
             <ZoomOut size={16} />
           </Button>
-          <span className="text-sm font-medium w-12 text-center">
+          <span className="text-sm font-medium w-14 text-center whitespace-nowrap">
             {Math.round(scale * 100)}%
           </span>
           <Button
             size="sm"
             variant="outline"
             onClick={handleZoomIn}
+            title="Aumentar zoom"
           >
             <ZoomIn size={16} />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleFitToWindow}
+            title="Ajustar à janela"
+          >
+            Ajustar
           </Button>
         </div>
       </div>

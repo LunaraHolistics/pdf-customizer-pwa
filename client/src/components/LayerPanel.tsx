@@ -135,7 +135,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                   </button>
                 </div>
 
-                {/* Action buttons */}
+                {/* Action buttons - ajustar a largura dos botões para caber na largura do bloco */}
                 {selectedLayerId === layer.id && (
                   <div className="flex gap-1 mt-2 pt-2 border-t border-gray-200 flex-wrap">
                     <Button
@@ -146,7 +146,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         onMoveToFront(layer.id);
                       }}
                       title="Trazer para frente"
-                      className="flex-1 min-w-fit"
+                      className="flex-1 min-w-0 px-2"
                     >
                       <ChevronUp size={14} />
                     </Button>
@@ -158,7 +158,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                         onMoveToBack(layer.id);
                       }}
                       title="Enviar para trás"
-                      className="flex-1 min-w-fit"
+                      className="flex-1 min-w-0 px-2"
                     >
                       <ChevronDown size={14} />
                     </Button>
@@ -172,7 +172,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                             onLayerDuplicate(layer.id);
                           }}
                           title="Duplicar"
-                          className="flex-1 min-w-fit"
+                          className="flex-1 min-w-0 px-2"
                         >
                           <Copy size={14} />
                         </Button>
@@ -184,7 +184,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                             onLayerDelete(layer.id);
                           }}
                           title="Deletar"
-                          className="flex-1 min-w-fit"
+                          className="flex-1 min-w-0 px-2"
                         >
                           <Trash2 size={14} />
                         </Button>
@@ -192,7 +192,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
                     )}
                     {layer.type === 'pdf' && (
                       <div className="flex-1 text-center text-xs text-gray-500 py-1">
-                        Camada base (não deletável)
+                        Camada base
                       </div>
                     )}
                   </div>
