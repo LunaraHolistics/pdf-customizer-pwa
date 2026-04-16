@@ -47,8 +47,8 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         </p>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-1 p-3">
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="space-y-1 p-3 h-full">
           {history.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p className="text-sm">Nenhuma versão salva</p>
