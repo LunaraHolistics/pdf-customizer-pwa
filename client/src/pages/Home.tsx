@@ -14,7 +14,10 @@ import { PDFUpload } from '@/components/PDFUpload';
 import { StatusIndicator } from '@/components/StatusIndicator';
 import { HelpDialog } from '@/components/HelpDialog';
 import { ProjectManager } from '@/components/ProjectManager';
+import { AlignmentToolbar } from '@/components/AlignmentToolbar';
+import { HistoryPanel } from '@/components/HistoryPanel';
 import { useLayerManager } from '@/hooks/useLayerManager';
+import { useHistoryManager } from '@/hooks/useHistoryManager';
 import { usePersistence } from '@/hooks/usePersistence';
 import { useImageAdjustments } from '@/hooks/useImageAdjustments';
 import { defaultAssets, loadImageAsBase64, getImageDimensions } from '@/lib/defaultAssets';
@@ -44,11 +47,14 @@ export default function Home() {
 
   const { saveProject, loadProject } = usePersistence();
   const { getDefaultAdjustments } = useImageAdjustments();
+  const { history, currentIndex, canUndo, canRedo, addSnapshot, undo, redo, goToSnapshot, deleteSnapshot } = useHistoryManager([]);
 
   const [projectId] = useState(() => nanoid());
   const [pdfBuffer, setPdfBuffer] = useState<ArrayBuffer | undefined>();
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [pdfLayerInitialized, setPdfLayerInitialized] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
 
   // Initialize with default layers and PDF layer
   useEffect(() => {
@@ -325,6 +331,17 @@ export default function Home() {
         />
       </div>
 
+      {/* Alignment Toolbar */}
+      {selectedState.selectedLayerId && (
+        <AlignmentToolbar
+          selectedLayers={layers.filter((l) => l.id === selectedState.selectedLayerId)}
+          allLayers={layers}
+          canvasWidth={CANVAS_WIDTH}
+          canvasHeight={CANVAS_HEIGHT}
+          onLayerUpdate={updateLayer}
+        />
+      )}
+
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden gap-4 p-4">
         {/* Left: PDF Preview or Canvas - ajustar a largura para não sobrepor a caixa de ferramenta lateral */}
@@ -364,30 +381,44 @@ export default function Home() {
           />
         </div>
 
-        {/* Right: Edit Panel */}
-        <div className="w-72 flex flex-col min-w-0 gap-4 flex-shrink-0 overflow-y-auto">
-          {selectedLayer && selectedLayer.type === 'text' && (
-            <TextEditPanel
-              layer={selectedLayer as TextLayer}
-              onTextChange={(text) => handleTextUpdate('content', text)}
-              onPropertyChange={handleTextUpdate}
-            />
-          )}
+        {/* Right: Edit or History Panel */}
+        {showHistory ? (
+          <HistoryPanel
+            history={history}
+            currentIndex={currentIndex}
+            onGoToSnapshot={(index) => {
+              const snapshot = history[index];
+              if (snapshot) {
+                toast.success(`Restaurado: ${snapshot.label}`);
+              }
+            }}
+            onDeleteSnapshot={deleteSnapshot}
+          />
+        ) : (
+          <div className="w-72 flex flex-col min-w-0 gap-4 flex-shrink-0 overflow-y-auto">
+            {selectedLayer && selectedLayer.type === 'text' && (
+              <TextEditPanel
+                layer={selectedLayer as TextLayer}
+                onTextChange={(text) => handleTextUpdate('content', text)}
+                onPropertyChange={handleTextUpdate}
+              />
+            )}
 
-          {selectedLayer && (selectedLayer.type === 'image' || selectedLayer.type === 'logo' || selectedLayer.type === 'background' || selectedLayer.type === 'pdf') && (
-            <ImageAdjustmentPanel
-              layer={selectedLayer}
-              onAdjustmentChange={handleImageAdjustmentUpdate}
-              onReset={handleResetAdjustments}
-            />
-          )}
+            {selectedLayer && (selectedLayer.type === 'image' || selectedLayer.type === 'logo' || selectedLayer.type === 'background' || selectedLayer.type === 'pdf') && (
+              <ImageAdjustmentPanel
+                layer={selectedLayer}
+                onAdjustmentChange={handleImageAdjustmentUpdate}
+                onReset={handleResetAdjustments}
+              />
+            )}
 
-          {!selectedLayer && (
-            <div className="bg-white rounded-lg p-4 text-center text-gray-500">
-              <p className="text-sm">Selecione uma camada para editar</p>
-            </div>
-          )}
-        </div>
+            {!selectedLayer && (
+              <div className="bg-white rounded-lg p-4 text-center text-gray-500">
+                <p className="text-sm">Selecione uma camada para editar</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
